@@ -1,0 +1,32 @@
+# Environment / secrets
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# dbt
+dbt/football_analytics/target/
+dbt/football_analytics/dbt_packages/
+dbt/football_analytics/logs/
+dbt_packages/
+
+# Airflow
+airflow/logs/
+airflow/plugins/__pycache__/
+*.pid
+
+# Landing data (runtime artifacts, not source-controlled)
+data/landing/*
+!data/landing/.gitkeep
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
