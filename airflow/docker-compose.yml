@@ -61,6 +61,10 @@ services:
           --conn-type 'databricks' \
           --conn-host "$DATABRICKS_HOST" \
           --conn-password "$DATABRICKS_TOKEN"
+        # Needed by FileSensor; not seeded automatically in this Airflow version.
+        airflow connections add 'fs_default' \
+          --conn-type 'fs' \
+          --conn-extra '{"path": "/"}' || true
 
   airflow-webserver:
     <<: *airflow-common

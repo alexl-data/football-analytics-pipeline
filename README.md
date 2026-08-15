@@ -22,7 +22,7 @@ layered SQL transformations, data testing, slowly changing dimensions, and CI.
 | Source | Type | Role |
 |---|---|---|
 | [football-data.org](https://www.football-data.org/) | REST API | Current season matches & standings for the Bundesliga (BL1) |
-| [openfootball](https://github.com/openfootball) | Static file (JSON/CSV) | Historical match results, dropped into `data/landing/` |
+| [openfootball](https://github.com/openfootball) (via the [footballcsv](https://github.com/footballcsv/deutschland) CSV mirror) | Static file (CSV) | Historical match results, dropped into `data/landing/` |
 | Team & stadium reference data | dbt seed (CSV) | Static dimension enrichment (capacity, city, founded year) |
 
 Combining a live API with a historical file source (picked up via an Airflow `FileSensor`) gives
@@ -32,34 +32,56 @@ paths have completed.
 ## Architecture
 
 ```
-                    ┌─────────────────────────┐        ┌──────────────────────────┐
-                    │  extract_live_matches    │        │  wait_for_historical_file │
-                    │  (PythonOperator,        │        │  (FileSensor)             │
-                    │   football-data.org API) │        └────────────┬─────────────┘
-                    └────────────┬─────────────┘                     │
-                                 │                                    ▼
-                                 │                       ┌──────────────────────────┐
-                                 │                       │ load_historical_to_raw    │
-                                 │                       │ (DatabricksSubmitRunOp.)  │
-                                 │                       └────────────┬─────────────┘
-                                 └───────────────┬────────────────────┘
-                                                  ▼
-                                       ┌────────────────────┐
-                                       │  dbt_run_staging    │
-                                       └──────────┬──────────┘
-                                                  ▼
-                                       ┌────────────────────┐
-                                       │  dbt_snapshot        │  (SCD Type 2: standings history)
-                                       └──────────┬──────────┘
-                                                  ▼
-                                       ┌────────────────────┐
-                                       │  dbt_run_marts       │
-                                       └──────────┬──────────┘
-                                                  ▼
-                                       ┌────────────────────┐
-                                       │  dbt_test             │
-                                       └────────────────────┘
+  ┌────────────────────────────────┐     ┌───────────────────────────────────┐
+  │      extract_live_matches      │     │      wait_for_historical_file     │
+  │ (@task, football-data.org API) │     │      (FileSensor, soft_fail)      │
+  └────────────────────────────────┘     └───────────────────────────────────┘
+                   │                                       ▼
+                   │                     ┌───────────────────────────────────┐
+                   │                     │       upload_historical_file      │
+                   │                     │ (local file -> Databricks Volume) │
+                   │                     └───────────────────────────────────┘
+                   │                                       ▼
+                   │                     ┌───────────────────────────────────┐
+                   │                     │       load_historical_to_raw      │
+                   │                     │   (DatabricksSubmitRunOperator,   │
+                   │                     │      sql_task via git_source)     │
+                   │                     └───────────────────────────────────┘
+                   │                                       │
+                   └───────────────────┴───────────────────┘
+                                       ▼
+                              ┌─────────────────┐
+                              │  raw_data_ready │
+                              └─────────────────┘
+                                       ▼
+                              ┌─────────────────┐
+                              │ dbt_run_staging │
+                              └─────────────────┘
+                                       ▼
+                              ┌─────────────────┐
+                              │   dbt_snapshot  │
+                              └─────────────────┘
+                                       ▼
+                              ┌─────────────────┐
+                              │  dbt_run_marts  │
+                              └─────────────────┘
+                                       ▼
+                              ┌─────────────────┐
+                              │     dbt_test    │
+                              └─────────────────┘
 ```
+
+`extract_live_matches` and `load_historical_to_raw` both MERGE on natural keys, so
+re-running a past date or re-uploading the same historical file is a no-op — required
+for `catchup=True` backfills to be safe. The `upload_historical_file` step exists
+because Databricks compute can't read the local filesystem directly; the historical
+file is staged to a Unity Catalog Volume first, then a git-sourced SQL job (pulled
+straight from this repo, no manual deployment into the Databricks workspace) merges
+it into the raw table. `dbt_run_staging` (SCD Type 2 standings history via
+`dbt_snapshot`) onward is built in Step 5+. `raw_data_ready` uses
+`trigger_rule=none_failed_min_one_success` so a skipped (not failed) historical
+branch — the file sensor soft-fails when no new file is dropped — doesn't block the
+daily live-data path.
 
 A detailed explanation of the Airflow architecture (scheduler / webserver / executor / metadata
 DB) lives in [`docs/architecture.md`](docs/architecture.md) (added alongside the Airflow setup).
@@ -90,7 +112,7 @@ Project is being built incrementally, in commit-sized steps:
 - [x] Step 1 — Project skeleton
 - [x] Step 2 — Airflow setup (Docker Compose, LocalExecutor)
 - [x] Step 3 — dbt project skeleton
-- [ ] Step 4 — Extraction layer (API + historical file + Databricks load)
+- [x] Step 4 — Extraction layer (API + historical file + Databricks load)
 - [ ] Step 5 — Staging models & generic tests
 - [ ] Step 6 — Intermediate & marts models
 - [ ] Step 7 — Snapshot for SCD Type 2 standings history
@@ -128,3 +150,13 @@ resolved from `.env` at runtime, no literal secrets.
 value starting with `/` (like `DATABRICKS_HTTP_PATH=/sql/1.0/warehouses/...`) into a
 Windows path when it's passed to a native `.exe` — silently corrupting it — even when
 the value only lives in an environment variable, not a command-line argument.
+
+### Extraction layer prerequisites
+
+- A free [football-data.org](https://www.football-data.org/client/register) API key in `.env` (`FOOTBALL_DATA_API_KEY`).
+- A Unity Catalog Volume for staging the historical file before it's merged:
+  ```sql
+  CREATE VOLUME football_analytics_dev.football_analytics.landing;
+  ```
+- The `databricks_default` and `fs_default` Airflow connections are created/refreshed
+  automatically by `airflow-init` on every `docker compose up` — no manual setup.
