@@ -22,7 +22,7 @@ layered SQL transformations, data testing, slowly changing dimensions, and CI.
 | Source | Type | Role |
 |---|---|---|
 | [football-data.org](https://www.football-data.org/) | REST API | Current season matches & standings for the Bundesliga (BL1) |
-| [openfootball](https://github.com/openfootball) (via the [footballcsv](https://github.com/footballcsv/deutschland) CSV mirror) | Static file (CSV) | Historical match results, dropped into `data/landing/` |
+| [openfootball](https://github.com/openfootball) (via the [footballcsv](https://github.com/footballcsv/deutschland) CSV mirror) | Static file(s) (CSV) | Historical match results — one or more season files dropped into `data/landing/` |
 | Team & stadium reference data | dbt seed (CSV) | Static dimension enrichment (capacity, city, founded year) |
 
 Combining a live API with a historical file source (picked up via an Airflow `FileSensor`) gives
@@ -72,13 +72,16 @@ paths have completed.
 ```
 
 `extract_live_matches` and `load_historical_to_raw` both MERGE on natural keys, so
-re-running a past date or re-uploading the same historical file is a no-op — required
-for `catchup=True` backfills to be safe. The `upload_historical_file` step exists
-because Databricks compute can't read the local filesystem directly; the historical
-file is staged to a Unity Catalog Volume first, then a git-sourced SQL job (pulled
-straight from this repo, no manual deployment into the Databricks workspace) merges
-it into the raw table. `dbt_run_staging` (SCD Type 2 standings history via
-`dbt_snapshot`) onward is built in Step 5+. `raw_data_ready` uses
+re-running a past date or re-uploading the same historical file(s) is a no-op —
+required for `catchup=True` backfills to be safe. The `upload_historical_file` step
+exists because Databricks compute can't read the local filesystem directly; every
+CSV dropped in `data/landing/` (one season or several) is staged to a Unity Catalog
+Volume under its own filename first, then a git-sourced SQL job (pulled straight
+from this repo, no manual deployment into the Databricks workspace) reads the whole
+Volume directory and merges it into the raw table — `mode => FAILFAST` makes that job
+fail loudly rather than silently misparse if a future season file's column shape
+doesn't match. `dbt_run_staging` (SCD Type 2 standings history via `dbt_snapshot`)
+onward is built in Step 5+. `raw_data_ready` uses
 `trigger_rule=none_failed_min_one_success` so a skipped (not failed) historical
 branch — the file sensor soft-fails when no new file is dropped — doesn't block the
 daily live-data path.
