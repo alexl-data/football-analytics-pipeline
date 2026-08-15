@@ -2,33 +2,34 @@
 -- sql_task, pulled directly from this repo via git_source — no manual
 -- deployment into the Databricks workspace).
 --
+-- Raw layer principle: land the source shape as closely as possible — only
+-- mechanical renames (spaces -> underscores, lowercase) so columns are valid
+-- SQL identifiers, no type interpretation beyond a trivial int cast, no
+-- derived columns. Date parsing and splitting FT ("8-0") into home/away
+-- score ints is staging-layer work (stg_openfootball__matches, Step 5), not
+-- ingestion work — see the "raw vs staging" discussion in project memory.
+--
 -- Source: footballcsv/deutschland mirror of openfootball, columns
 -- Round,Date,Team 1,FT,Team 2 (e.g. "1,Fri Sep 18 2020,Bayern München,8-0,FC
--- Schalke 04") — FT is a combined "home-away" score, no separate season
--- column (derived from match_date in staging instead, not raw).
+-- Schalke 04").
 
 CREATE TABLE IF NOT EXISTS football_analytics_dev.football_analytics.raw_openfootball_matches (
-    matchday INT,
-    match_date DATE,
-    home_team STRING,
-    away_team STRING,
-    home_score INT,
-    away_score INT,
+    round INT,
+    date STRING,
+    team_1 STRING,
+    ft STRING,
+    team_2 STRING,
     ingested_at TIMESTAMP
 ) USING DELTA;
 
 MERGE INTO football_analytics_dev.football_analytics.raw_openfootball_matches AS target
 USING (
     SELECT
-        Round AS matchday,
-        -- Date is "Fri Sep 18 2020" — drop the weekday token, Databricks'
-        -- date parser rejects 'EEE' combined with other fields as an
-        -- unsafe cross-version pattern (INCONSISTENT_BEHAVIOR_CROSS_VERSION).
-        to_date(substring_index(Date, ' ', -3), 'MMM d yyyy') AS match_date,
-        `Team 1` AS home_team,
-        `Team 2` AS away_team,
-        CAST(split(FT, '-')[0] AS INT) AS home_score,
-        CAST(split(FT, '-')[1] AS INT) AS away_score,
+        Round AS round,
+        Date AS date,
+        `Team 1` AS team_1,
+        FT AS ft,
+        `Team 2` AS team_2,
         current_timestamp() AS ingested_at
     FROM read_files(
         '/Volumes/football_analytics_dev/football_analytics/landing/historical_matches.csv',
@@ -36,8 +37,8 @@ USING (
         header => true
     )
 ) AS source
-ON  target.match_date = source.match_date
-AND target.home_team = source.home_team
-AND target.away_team = source.away_team
+ON  target.date = source.date
+AND target.team_1 = source.team_1
+AND target.team_2 = source.team_2
 WHEN MATCHED THEN UPDATE SET *
 WHEN NOT MATCHED THEN INSERT *;
