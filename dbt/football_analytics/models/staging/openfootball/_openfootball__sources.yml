@@ -1,0 +1,12 @@
+version: 2
+
+sources:
+  - name: openfootball
+    database: football_analytics_dev
+    schema: football_analytics
+    tables:
+      - name: raw_openfootball_matches
+        description: >
+          Historical Bundesliga results from the footballcsv/deutschland mirror
+          of openfootball, landed source-shaped by load_historical_to_raw
+          (unparsed date/score strings — see that file for why).

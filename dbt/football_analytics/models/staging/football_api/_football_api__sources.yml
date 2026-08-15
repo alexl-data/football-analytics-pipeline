@@ -1,0 +1,9 @@
+version: 2
+
+sources:
+  - name: football_api
+    database: football_analytics_dev
+    schema: football_analytics
+    tables:
+      - name: raw_football_api_matches
+        description: Live/current-season Bundesliga matches from football-data.org, MERGEd daily by extract_live_matches.

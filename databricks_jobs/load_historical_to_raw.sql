@@ -34,7 +34,11 @@ USING (
     FROM read_files(
         '/Volumes/football_analytics_dev/football_analytics/landing/historical_matches.csv',
         format => 'csv',
-        header => true
+        header => true,
+        -- Explicit schema, not inferred: schema inference on this file was
+        -- silently nulling ~80% of the FT column (inconsistent inference
+        -- across the sampled rows), a real production-grade footgun.
+        schema => 'Round INT, Date STRING, `Team 1` STRING, FT STRING, `Team 2` STRING'
     )
 ) AS source
 ON  target.date = source.date

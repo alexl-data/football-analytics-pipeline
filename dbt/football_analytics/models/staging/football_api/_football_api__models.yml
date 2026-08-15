@@ -1,0 +1,22 @@
+version: 2
+
+models:
+  - name: stg_football_api__matches
+    description: Live/current-season Bundesliga matches, 1:1 with the football-data.org source.
+    columns:
+      - name: match_id
+        description: football-data.org's own match ID.
+        tests:
+          - unique
+          - not_null
+      - name: home_team
+        tests:
+          - not_null
+      - name: away_team
+        tests:
+          - not_null
+      - name: status
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['SCHEDULED', 'TIMED', 'IN_PLAY', 'PAUSED', 'FINISHED', 'SUSPENDED', 'POSTPONED', 'CANCELLED', 'AWARDED']
