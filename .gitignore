@@ -12,6 +12,7 @@ venv/
 dbt/football_analytics/target/
 dbt/football_analytics/dbt_packages/
 dbt/football_analytics/logs/
+dbt/football_analytics/.user.yml
 dbt_packages/
 
 # Airflow
