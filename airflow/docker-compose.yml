@@ -55,6 +55,12 @@ services:
           --password "${AIRFLOW_ADMIN_PASSWORD:-admin}" \
           --firstname Admin --lastname User --role Admin \
           --email admin@example.com || true
+        # Re-created on every init so it always matches the current .env token.
+        airflow connections delete 'databricks_default' 2>/dev/null || true
+        airflow connections add 'databricks_default' \
+          --conn-type 'databricks' \
+          --conn-host "$DATABRICKS_HOST" \
+          --conn-password "$DATABRICKS_TOKEN"
 
   airflow-webserver:
     <<: *airflow-common
