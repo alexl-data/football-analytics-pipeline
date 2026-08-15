@@ -88,7 +88,7 @@ docs/                Architecture notes
 Project is being built incrementally, in commit-sized steps:
 
 - [x] Step 1 — Project skeleton
-- [ ] Step 2 — Airflow setup (Docker Compose, LocalExecutor)
+- [x] Step 2 — Airflow setup (Docker Compose, LocalExecutor)
 - [ ] Step 3 — dbt project skeleton
 - [ ] Step 4 — Extraction layer (API + historical file + Databricks load)
 - [ ] Step 5 — Staging models & generic tests
@@ -99,5 +99,16 @@ Project is being built incrementally, in commit-sized steps:
 
 ## Setup
 
-Setup instructions will be filled in as each component is built (Docker Compose usage in Step 2,
-dbt/Databricks configuration in Step 3).
+### Airflow (Docker Compose)
+
+```bash
+cp .env.example .env   # fill in AIRFLOW_FERNET_KEY, AIRFLOW_WEBSERVER_SECRET_KEY, admin credentials
+cd airflow
+docker compose up -d
+```
+
+Open `http://localhost:8080` and log in with the admin credentials from `.env`. See
+[`docs/architecture.md`](docs/architecture.md) for what each service does and why
+LocalExecutor was chosen.
+
+dbt/Databricks configuration instructions will be added in Step 3.
