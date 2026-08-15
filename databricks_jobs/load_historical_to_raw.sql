@@ -2,14 +2,14 @@
 -- sql_task, pulled directly from this repo via git_source — no manual
 -- deployment into the Databricks workspace).
 --
--- PROVISIONAL: column names/types below are a best guess and have not yet
--- been verified against a real openfootball export. Adjust once a sample
--- file is available (see docs/architecture.md).
+-- Source: footballcsv/deutschland mirror of openfootball, columns
+-- Round,Date,Team 1,FT,Team 2 (e.g. "1,Fri Sep 18 2020,Bayern München,8-0,FC
+-- Schalke 04") — FT is a combined "home-away" score, no separate season
+-- column (derived from match_date in staging instead, not raw).
 
 CREATE TABLE IF NOT EXISTS football_analytics_dev.football_analytics.raw_openfootball_matches (
-    match_date DATE,
-    season STRING,
     matchday INT,
+    match_date DATE,
     home_team STRING,
     away_team STRING,
     home_score INT,
@@ -20,13 +20,15 @@ CREATE TABLE IF NOT EXISTS football_analytics_dev.football_analytics.raw_openfoo
 MERGE INTO football_analytics_dev.football_analytics.raw_openfootball_matches AS target
 USING (
     SELECT
-        Date AS match_date,
-        Season AS season,
-        Matchday AS matchday,
-        HomeTeam AS home_team,
-        AwayTeam AS away_team,
-        HomeScore AS home_score,
-        AwayScore AS away_score,
+        Round AS matchday,
+        -- Date is "Fri Sep 18 2020" — drop the weekday token, Databricks'
+        -- date parser rejects 'EEE' combined with other fields as an
+        -- unsafe cross-version pattern (INCONSISTENT_BEHAVIOR_CROSS_VERSION).
+        to_date(substring_index(Date, ' ', -3), 'MMM d yyyy') AS match_date,
+        `Team 1` AS home_team,
+        `Team 2` AS away_team,
+        CAST(split(FT, '-')[0] AS INT) AS home_score,
+        CAST(split(FT, '-')[1] AS INT) AS away_score,
         current_timestamp() AS ingested_at
     FROM read_files(
         '/Volumes/football_analytics_dev/football_analytics/landing/historical_matches.csv',
