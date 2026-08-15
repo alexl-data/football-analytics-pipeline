@@ -11,7 +11,11 @@
 --
 -- Source: footballcsv/deutschland mirror of openfootball, columns
 -- Round,Date,Team 1,FT,Team 2 (e.g. "1,Fri Sep 18 2020,Bayern München,8-0,FC
--- Schalke 04").
+-- Schalke 04"). upload_historical_file uploads every dropped season file
+-- under its own name (not a fixed filename), so this reads the whole landing
+-- directory and unions all of them — supports loading multiple seasons.
+-- The date string already encodes the year, so the MERGE key below stays
+-- unique across seasons without needing a separate season column.
 
 CREATE TABLE IF NOT EXISTS football_analytics_dev.football_analytics.raw_openfootball_matches (
     round INT,
@@ -32,13 +36,20 @@ USING (
         `Team 2` AS team_2,
         current_timestamp() AS ingested_at
     FROM read_files(
-        '/Volumes/football_analytics_dev/football_analytics/landing/historical_matches.csv',
+        '/Volumes/football_analytics_dev/football_analytics/landing/',
         format => 'csv',
         header => true,
-        -- Explicit schema, not inferred: schema inference on this file was
-        -- silently nulling ~80% of the FT column (inconsistent inference
-        -- across the sampled rows), a real production-grade footgun.
-        schema => 'Round INT, Date STRING, `Team 1` STRING, FT STRING, `Team 2` STRING'
+        -- Explicit schema instead of relying on inference: not because
+        -- inference caused the null-FT bug we hit earlier (that turned out
+        -- to be a genuine gap in one source file, see project history) but
+        -- because explicit types are deterministic regardless of which rows
+        -- Databricks happens to sample. mode => FAILFAST is the part that
+        -- actually guards against a shape change (column added/removed/
+        -- reordered) in a future season file: without it, a mismatch would
+        -- silently null/misalign data (PERMISSIVE, the default) instead of
+        -- failing the job loudly.
+        schema => 'Round INT, Date STRING, `Team 1` STRING, FT STRING, `Team 2` STRING',
+        mode => 'FAILFAST'
     )
 ) AS source
 ON  target.date = source.date

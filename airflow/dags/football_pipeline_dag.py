@@ -22,7 +22,6 @@ from airflow.sensors.filesystem import FileSensor
 RAW_CATALOG = "football_analytics_dev"
 RAW_SCHEMA = "football_analytics"
 VOLUME_PATH = f"/Volumes/{RAW_CATALOG}/{RAW_SCHEMA}/landing"
-HISTORICAL_FILENAME = "historical_matches.csv"
 GIT_REPO_URL = "https://github.com/alexl-data/football-analytics-pipeline"
 GIT_BRANCH = "main"
 HISTORICAL_LANDING_GLOB = "/opt/airflow/data/landing/*.csv"
@@ -122,23 +121,27 @@ def football_pipeline():
     )
 
     @task
-    def upload_historical_file() -> None:
-        """Uploads the local historical file to the Databricks Volume under a fixed name."""
+    def upload_historical_file() -> int:
+        """Uploads every local historical file to the Volume, each under its own
+        name (not a fixed filename) — supports dropping multiple season files.
+        load_historical_to_raw then reads the whole landing directory."""
         import glob
+        from pathlib import Path
 
         from databricks.sdk import WorkspaceClient
 
-        matches = glob.glob(HISTORICAL_LANDING_GLOB)
-        if not matches:
-            return
-        local_path = matches[0]
+        local_paths = glob.glob(HISTORICAL_LANDING_GLOB)
+        if not local_paths:
+            return 0
 
         w = WorkspaceClient(
             host=os.environ["DATABRICKS_HOST"],
             token=os.environ["DATABRICKS_TOKEN"],
         )
-        with open(local_path, "rb") as f:
-            w.files.upload(f"{VOLUME_PATH}/{HISTORICAL_FILENAME}", f, overwrite=True)
+        for local_path in local_paths:
+            with open(local_path, "rb") as f:
+                w.files.upload(f"{VOLUME_PATH}/{Path(local_path).name}", f, overwrite=True)
+        return len(local_paths)
 
     upload_task = upload_historical_file()
     wait_for_historical_file >> upload_task
