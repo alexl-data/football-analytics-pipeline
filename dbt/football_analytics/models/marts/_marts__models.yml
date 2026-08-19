@@ -1,0 +1,41 @@
+version: 2
+
+models:
+  - name: dim_teams
+    description: Team dimension — one row per club, with static reference data.
+    columns:
+      - name: team_id
+        tests:
+          - unique
+          - not_null
+
+  - name: fct_matches
+    description: >
+      One row per match from either source, with team names resolved to
+      team_id and a computed result_type. Incrementally materialized.
+    columns:
+      - name: match_id
+        tests:
+          - unique
+          - not_null
+      - name: home_team_id
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_teams')
+                field: team_id
+      - name: away_team_id
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_teams')
+                field: team_id
+      - name: result_type
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['home_win', 'away_win', 'draw']
+              config:
+                where: "result_type is not null"

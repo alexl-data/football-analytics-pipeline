@@ -6,8 +6,8 @@
 -- mechanical renames (spaces -> underscores, lowercase) so columns are valid
 -- SQL identifiers, no type interpretation beyond a trivial int cast, no
 -- derived columns. Date parsing and splitting FT ("8-0") into home/away
--- score ints is staging-layer work (stg_openfootball__matches, Step 5), not
--- ingestion work — see the "raw vs staging" discussion in project memory.
+-- score ints is staging-layer work (stg_openfootball__matches), not
+-- ingestion work.
 --
 -- Source: footballcsv/deutschland mirror of openfootball, columns
 -- Round,Date,Team 1,FT,Team 2 (e.g. "1,Fri Sep 18 2020,Bayern München,8-0,FC
@@ -39,15 +39,12 @@ USING (
         '/Volumes/football_analytics_dev/football_analytics/landing/',
         format => 'csv',
         header => true,
-        -- Explicit schema instead of relying on inference: not because
-        -- inference caused the null-FT bug we hit earlier (that turned out
-        -- to be a genuine gap in one source file, see project history) but
-        -- because explicit types are deterministic regardless of which rows
-        -- Databricks happens to sample. mode => FAILFAST is the part that
-        -- actually guards against a shape change (column added/removed/
-        -- reordered) in a future season file: without it, a mismatch would
-        -- silently null/misalign data (PERMISSIVE, the default) instead of
-        -- failing the job loudly.
+        -- Explicit schema instead of relying on inference, so parsing is
+        -- deterministic regardless of which rows Databricks happens to
+        -- sample. mode => FAILFAST is what actually guards against a shape
+        -- change (column added/removed/reordered) in a future season file:
+        -- without it, a mismatch would silently null/misalign data
+        -- (PERMISSIVE, the default) instead of failing the job loudly.
         schema => 'Round INT, Date STRING, `Team 1` STRING, FT STRING, `Team 2` STRING',
         mode => 'FAILFAST'
     )

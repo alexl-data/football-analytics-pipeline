@@ -117,7 +117,7 @@ Project is being built incrementally, in commit-sized steps:
 - [x] Step 3 — dbt project skeleton
 - [x] Step 4 — Extraction layer (API + historical file + Databricks load)
 - [x] Step 5 — Staging models & generic tests
-- [ ] Step 6 — Intermediate & marts models
+- [x] Step 6 — Intermediate & marts models
 - [ ] Step 7 — Snapshot for SCD Type 2 standings history
 - [ ] Step 8 — Macros, custom tests, dbt docs
 - [ ] Step 9 — CI (GitHub Actions)

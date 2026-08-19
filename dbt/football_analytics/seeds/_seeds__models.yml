@@ -1,0 +1,37 @@
+version: 2
+
+seeds:
+  - name: teams
+    description: >
+      Static team/stadium reference data (city, stadium, capacity, founded
+      year). Compiled from general knowledge, not cross-checked against an
+      authoritative source — stadium sponsor names in particular change
+      often, so treat capacity/stadium as illustrative rather than
+      guaranteed current.
+    columns:
+      - name: team_id
+        tests:
+          - unique
+          - not_null
+      - name: team_name
+        tests:
+          - unique
+          - not_null
+
+  - name: team_name_aliases
+    description: >
+      Maps every team-name spelling observed across sources (football-data.org,
+      openfootball) to a canonical team_id — the two sources disagree on
+      naming for some clubs (e.g. "Bayern München" vs "FC Bayern München").
+    columns:
+      - name: source_team_name
+        tests:
+          - unique
+          - not_null
+      - name: team_id
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('teams')
+                field: team_id
