@@ -50,25 +50,13 @@ paths have completed.
                    │                                       │
                    └───────────────────┴───────────────────┘
                                        ▼
-                              ┌─────────────────┐
-                              │  raw_data_ready │
-                              └─────────────────┘
+                              ┌────────────────┐
+                              │ raw_data_ready │
+                              └────────────────┘
                                        ▼
-                              ┌─────────────────┐
-                              │ dbt_run_staging │
-                              └─────────────────┘
-                                       ▼
-                              ┌─────────────────┐
-                              │   dbt_snapshot  │
-                              └─────────────────┘
-                                       ▼
-                              ┌─────────────────┐
-                              │  dbt_run_marts  │
-                              └─────────────────┘
-                                       ▼
-                              ┌─────────────────┐
-                              │     dbt_test    │
-                              └─────────────────┘
+                              ┌────────────────┐
+                              │    dbt_build   │
+                              └────────────────┘
 ```
 
 `extract_live_matches` and `load_historical_to_raw` both MERGE on natural keys, so
@@ -80,11 +68,21 @@ Volume under its own filename first, then a git-sourced SQL job (pulled straight
 from this repo, no manual deployment into the Databricks workspace) reads the whole
 Volume directory and merges it into the raw table — `mode => FAILFAST` makes that job
 fail loudly rather than silently misparse if a future season file's column shape
-doesn't match. `dbt_run_staging` (SCD Type 2 standings history via `dbt_snapshot`)
-onward is built in Step 5+. `raw_data_ready` uses
-`trigger_rule=none_failed_min_one_success` so a skipped (not failed) historical
-branch — the file sensor soft-fails when no new file is dropped — doesn't block the
-daily live-data path.
+doesn't match. `raw_data_ready` uses `trigger_rule=none_failed_min_one_success` so a
+skipped (not failed) historical branch — the file sensor soft-fails when no new file
+is dropped — doesn't block the daily live-data path.
+
+`dbt_build` runs `dbt build` (seeds, models, snapshot, and tests together) as a
+single Airflow task rather than separate staging/snapshot/marts/test tasks. That's
+deliberate: `fct_standings_current` (the current-season league table, in marts) is
+itself a dependency of `snapshot_standings`, since a snapshot needs something to
+snapshot — so a fixed staging-then-snapshot-then-marts task order would actually be
+wrong. dbt resolves this correctly on its own via its internal dependency graph;
+Airflow doesn't need to (and shouldn't try to) micromanage dbt's internal ordering.
+dbt itself runs from an isolated virtualenv baked into the Airflow image
+(`airflow/Dockerfile`), because `dbt-databricks` requires a newer `click` version than
+Airflow's own pinned constraints allow — installing both into the same environment is
+a real, unresolvable version conflict, not just a preference.
 
 A detailed explanation of the Airflow architecture (scheduler / webserver / executor / metadata
 DB) lives in [`docs/architecture.md`](docs/architecture.md) (added alongside the Airflow setup).
@@ -96,7 +94,10 @@ DB) lives in [`docs/architecture.md`](docs/architecture.md) (added alongside the
 - **intermediate (`int_`)** — reusable business-logic building blocks (e.g. matches enriched with
   a computed result type). Not meant to be queried directly by BI tools.
 - **marts (`fct_`/`dim_`)** — final, consumption-ready fact and dimension tables (e.g.
-  `fct_matches`, `dim_teams`).
+  `fct_matches`, `dim_teams`). A mart can depend on another mart (e.g. `fct_standings_current`
+  is built from `fct_matches`) — that's still marts, not intermediate. An intermediate model
+  should never depend on a marts table; that inverts the intended staging → intermediate →
+  marts direction.
 
 ## Project structure
 
@@ -118,7 +119,7 @@ Project is being built incrementally, in commit-sized steps:
 - [x] Step 4 — Extraction layer (API + historical file + Databricks load)
 - [x] Step 5 — Staging models & generic tests
 - [x] Step 6 — Intermediate & marts models
-- [ ] Step 7 — Snapshot for SCD Type 2 standings history
+- [x] Step 7 — Snapshot for SCD Type 2 standings history
 - [ ] Step 8 — Macros, custom tests, dbt docs
 - [ ] Step 9 — CI (GitHub Actions)
 

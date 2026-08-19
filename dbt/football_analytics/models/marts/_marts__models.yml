@@ -39,3 +39,21 @@ models:
                 values: ['home_win', 'away_win', 'draw']
               config:
                 where: "result_type is not null"
+
+  - name: fct_standings_current
+    description: >
+      Current-season league table (one row per team), filtered to the most
+      recent season_start_year in the live source. Snapshotted by
+      snapshot_standings to build SCD Type 2 standings history.
+    columns:
+      - name: team_id
+        tests:
+          - unique
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_teams')
+                field: team_id
+      - name: position
+        tests:
+          - not_null

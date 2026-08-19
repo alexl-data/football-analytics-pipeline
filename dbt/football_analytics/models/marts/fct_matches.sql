@@ -10,7 +10,8 @@
     config(
         materialized='incremental',
         unique_key='match_id',
-        incremental_strategy='merge'
+        incremental_strategy='merge',
+        on_schema_change='append_new_columns'
     )
 }}
 
@@ -19,6 +20,7 @@ select
     source,
     matchday,
     match_date,
+    season_start_year,
     home_team_id,
     away_team_id,
     home_score,

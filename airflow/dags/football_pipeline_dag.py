@@ -15,9 +15,12 @@ import os
 import pendulum
 import requests
 from airflow.decorators import dag, task
+from airflow.operators.bash import BashOperator
 from airflow.operators.empty import EmptyOperator
 from airflow.providers.databricks.operators.databricks import DatabricksSubmitRunOperator
 from airflow.sensors.filesystem import FileSensor
+
+DBT_PROJECT_DIR = "/opt/airflow/dbt/football_analytics"
 
 RAW_CATALOG = "football_analytics_dev"
 RAW_SCHEMA = "football_analytics"
@@ -174,9 +177,26 @@ def football_pipeline():
         trigger_rule="none_failed_min_one_success",
     )
 
+    # A single `dbt build` (seeds + models + snapshots + tests, in dbt's own
+    # dependency order) rather than separate staging/snapshot/marts/test
+    # tasks: fct_standings_current (marts) is a dependency of
+    # snapshot_standings, so a fixed staging-then-snapshot-then-marts task
+    # order would be wrong — dbt's own graph resolves this correctly, Airflow
+    # doesn't need to micromanage it.
+    dbt_build = BashOperator(
+        task_id="dbt_build",
+        # dbt lives in its own venv (see airflow/Dockerfile) — its
+        # click>=8.2 requirement conflicts with Airflow's own pinned
+        # click==8.1.7, so it can't be installed alongside Airflow itself.
+        bash_command=(
+            f"/opt/dbt_venv/bin/dbt build "
+            f"--project-dir {DBT_PROJECT_DIR} --profiles-dir {DBT_PROJECT_DIR}"
+        ),
+    )
+
     live_matches = extract_live_matches()
     upload_task >> load_historical_to_raw
-    [live_matches, load_historical_to_raw] >> raw_data_ready
+    [live_matches, load_historical_to_raw] >> raw_data_ready >> dbt_build
 
 
 football_pipeline()

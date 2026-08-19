@@ -60,6 +60,20 @@ crash-looping). The constraints file pins apache-airflow and every provider/depe
 to versions known-compatible with the base image's Airflow + Python version, so extra
 packages can only be added, not silently upgrade the core.
 
+## Running dbt from inside the Airflow container
+
+`dbt_build` (the task that runs `dbt build`) can't just `pip install
+dbt-databricks` alongside Airflow's own dependencies in `requirements.txt`:
+`dbt-databricks` 1.12.4 requires `click>=8.2.0`, but the constraints file
+above (needed for the reason described there) pins `click==8.1.7` for
+Airflow's own CLI. That's a genuine, unresolvable conflict between what the
+two tools need from the same package — not something a different flag or
+version bump papers over. The fix is isolation, not compromise:
+`airflow/Dockerfile` creates a second virtualenv at `/opt/dbt_venv` (as
+`root`, then `chown`'d back to the `airflow` user) and installs
+`dbt-databricks` only there, untouched by Airflow's constraints. The DAG
+calls `/opt/dbt_venv/bin/dbt` directly rather than a bare `dbt` on `PATH`.
+
 ## Running it locally
 
 ```bash
