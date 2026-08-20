@@ -2,15 +2,12 @@ version: 2
 
 snapshots:
   - name: snapshot_standings
-    description: >
-      SCD Type 2 history of the current-season league table. A new row-version
-      is created whenever any tracked column changes for a team (including
-      position, which can shift for a team even without it playing, since
-      it's relative to every other team's results).
+    description: '{{ doc("scd2_snapshot_standings") }}'
     columns:
       - name: team_id
         tests:
           - not_null
+          - one_active_scd_row
       - name: position
         tests:
           - not_null

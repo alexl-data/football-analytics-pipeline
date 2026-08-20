@@ -39,6 +39,12 @@ models:
                 values: ['home_win', 'away_win', 'draw']
               config:
                 where: "result_type is not null"
+      - name: home_score
+        tests:
+          - non_negative
+      - name: away_score
+        tests:
+          - non_negative
 
   - name: fct_standings_current
     description: >
@@ -57,3 +63,24 @@ models:
       - name: position
         tests:
           - not_null
+      - name: played
+        tests:
+          - non_negative
+      - name: won
+        tests:
+          - non_negative
+      - name: drawn
+        tests:
+          - non_negative
+      - name: lost
+        tests:
+          - non_negative
+      - name: goals_for
+        tests:
+          - non_negative
+      - name: goals_against
+        tests:
+          - non_negative
+      - name: points
+        tests:
+          - non_negative

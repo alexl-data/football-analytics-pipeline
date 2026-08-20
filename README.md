@@ -120,7 +120,7 @@ Project is being built incrementally, in commit-sized steps:
 - [x] Step 5 — Staging models & generic tests
 - [x] Step 6 — Intermediate & marts models
 - [x] Step 7 — Snapshot for SCD Type 2 standings history
-- [ ] Step 8 — Macros, custom tests, dbt docs
+- [x] Step 8 — Macros, custom tests, dbt docs
 - [ ] Step 9 — CI (GitHub Actions)
 
 ## Setup
@@ -154,6 +154,13 @@ resolved from `.env` at runtime, no literal secrets.
 value starting with `/` (like `DATABRICKS_HTTP_PATH=/sql/1.0/warehouses/...`) into a
 Windows path when it's passed to a native `.exe` — silently corrupting it — even when
 the value only lives in an environment variable, not a command-line argument.
+
+To browse the generated documentation site (model/column descriptions, lineage graph):
+
+```bash
+dbt docs generate --project-dir dbt/football_analytics --profiles-dir dbt/football_analytics
+dbt docs serve --project-dir dbt/football_analytics --profiles-dir dbt/football_analytics
+```
 
 ### Extraction layer prerequisites
 

@@ -52,12 +52,7 @@ select
         when unioned.home_score < unioned.away_score then 'away_win'
         else 'draw'
     end as result_type,
-    -- German football seasons run Aug-May, crossing a calendar year
-    -- boundary: the season is identified by the year it starts in.
-    case
-        when month(unioned.match_date) >= 7 then year(unioned.match_date)
-        else year(unioned.match_date) - 1
-    end as season_start_year,
+    {{ get_season_start_year('unioned.match_date') }} as season_start_year,
     unioned.ingested_at
 from unioned
 left join {{ ref('team_name_aliases') }} as home_alias
