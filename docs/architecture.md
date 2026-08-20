@@ -87,3 +87,30 @@ Then open `http://localhost:8080` and log in with `AIRFLOW_ADMIN_USERNAME` /
 this for anything beyond local use). The `setup_healthcheck` DAG should appear and
 can be triggered manually to confirm the scheduler and executor work end to end; it's
 temporary and will be removed once the real pipeline DAG exists.
+
+## What CI/CD does and doesn't cover here
+
+`.github/workflows/` (`ci-dbt-test.yml`, `ci-lint.yml`, `ci-docker-build.yml`) test
+and validate code on every pull request — build the dbt project against the `dev`
+catalog, lint the SQL, and confirm the Airflow image still builds. That's it: GitHub
+Actions runs on a temporary, GitHub-hosted machine that exists only for the few
+minutes a workflow takes, then disappears. It is not a place to host a long-running
+service, so merging to `main` does not start, restart, or otherwise touch Airflow
+anywhere.
+
+Airflow itself currently only runs where `docker compose up` is run manually — this
+machine. The `@daily` schedule only fires while that's up; there's no environment
+where it runs continuously and unattended. That's a deliberate, reasonable scope
+boundary for a local portfolio project, not an oversight, but it's worth being
+explicit about: **running `docker compose up` locally is not the same as having a
+production deployment**, even though the same Airflow/dbt/Databricks pieces would
+carry over largely unchanged.
+
+To actually run this unattended in production, Airflow would need a persistent host
+— a managed service (AWS MWAA, Google Cloud Composer, Astronomer) or a
+self-managed always-on VM/Kubernetes cluster running this same Docker Compose (or
+Helm-equivalent) setup. Only once something is continuously feeding a separate
+`football_analytics_prod` catalog with fresh raw data would a merge-triggered "`dbt
+build` against prod" step in CD actually mean something — before that, it would just
+rebuild marts on top of catalog that never receives new data, which is why this
+project's CI stops at validating against `dev` and doesn't attempt a prod deploy step.

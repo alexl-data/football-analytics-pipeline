@@ -16,19 +16,22 @@
 }}
 
 select
-    match_id,
-    source,
-    matchday,
-    match_date,
-    season_start_year,
-    home_team_id,
-    away_team_id,
-    home_score,
-    away_score,
-    result_type,
-    ingested_at
-from {{ ref('int_matches__unioned') }}
+    unioned_matches.match_id,
+    unioned_matches.data_source,
+    unioned_matches.matchday,
+    unioned_matches.match_date,
+    unioned_matches.season_start_year,
+    unioned_matches.home_team_id,
+    unioned_matches.away_team_id,
+    unioned_matches.home_score,
+    unioned_matches.away_score,
+    unioned_matches.result_type,
+    unioned_matches.ingested_at
+from {{ ref('int_matches__unioned') }} as unioned_matches
 
 {% if is_incremental() %}
-where ingested_at > (select coalesce(max(ingested_at), timestamp('1900-01-01')) from {{ this }})
+    where unioned_matches.ingested_at > (
+        select coalesce(max(t.ingested_at), timestamp('1900-01-01'))
+        from {{ this }} as t
+    )
 {% endif %}

@@ -1,0 +1,32 @@
+name: CI - Lint
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "dbt/**"
+      - ".sqlfluff"
+      - ".github/workflows/ci-lint.yml"
+
+jobs:
+  sqlfluff:
+    runs-on: ubuntu-latest
+    env:
+      # SQLFluff's dbt templater needs to parse the project through a
+      # working dbt profile to resolve ref()/source()/macros — that means
+      # real Databricks credentials, even though it doesn't run any models.
+      DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+      DATABRICKS_HTTP_PATH: ${{ secrets.DATABRICKS_HTTP_PATH }}
+      DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
+      DATABRICKS_CATALOG: ${{ secrets.DATABRICKS_CATALOG }}
+      DATABRICKS_SCHEMA: football_analytics
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - run: pip install dbt-databricks==1.12.4 sqlfluff sqlfluff-templater-dbt
+
+      - run: sqlfluff lint dbt/football_analytics/models dbt/football_analytics/snapshots

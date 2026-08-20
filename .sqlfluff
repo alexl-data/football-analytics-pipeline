@@ -1,0 +1,9 @@
+[sqlfluff]
+templater = dbt
+dialect = databricks
+
+[sqlfluff:templater:dbt]
+profiles_dir = dbt/football_analytics
+project_dir = dbt/football_analytics
+profile = football_analytics
+target = dev

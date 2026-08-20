@@ -60,7 +60,7 @@ models:
               arguments:
                 to: ref('dim_teams')
                 field: team_id
-      - name: position
+      - name: table_position
         tests:
           - not_null
       - name: played

@@ -1,0 +1,35 @@
+name: CI - dbt build/test
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "dbt/**"
+      - ".github/workflows/ci-dbt-test.yml"
+
+jobs:
+  dbt-build:
+    runs-on: ubuntu-latest
+    env:
+      DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+      DATABRICKS_HTTP_PATH: ${{ secrets.DATABRICKS_HTTP_PATH }}
+      DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
+      DATABRICKS_CATALOG: ${{ secrets.DATABRICKS_CATALOG }}
+      DATABRICKS_SCHEMA: football_analytics
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - run: pip install dbt-databricks==1.12.4
+
+      # Runs against the same dev catalog used for local development — fine
+      # for a solo project's PR volume; a team project would want a
+      # PR-scoped or ephemeral schema instead to avoid concurrent runs
+      # colliding.
+      - run: >
+          dbt build
+          --project-dir dbt/football_analytics
+          --profiles-dir dbt/football_analytics

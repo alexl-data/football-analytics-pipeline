@@ -8,6 +8,6 @@ snapshots:
         tests:
           - not_null
           - one_active_scd_row
-      - name: position
+      - name: table_position
         tests:
           - not_null

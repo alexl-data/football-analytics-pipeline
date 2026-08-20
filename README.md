@@ -106,7 +106,7 @@ airflow/            Airflow Docker Compose setup + DAGs
 dbt/football_analytics/  dbt project (staging / intermediate / marts / snapshots / seeds / macros)
 data/landing/        Drop zone the FileSensor watches for the historical data file
 docs/                Architecture notes
-.github/workflows/    CI pipelines (dbt tests, SQL linting)
+.github/workflows/    CI pipelines (dbt build/test, SQL linting, Docker image build)
 ```
 
 ## Status
@@ -121,7 +121,7 @@ Project is being built incrementally, in commit-sized steps:
 - [x] Step 6 — Intermediate & marts models
 - [x] Step 7 — Snapshot for SCD Type 2 standings history
 - [x] Step 8 — Macros, custom tests, dbt docs
-- [ ] Step 9 — CI (GitHub Actions)
+- [x] Step 9 — CI (GitHub Actions)
 
 ## Setup
 
@@ -171,3 +171,13 @@ dbt docs serve --project-dir dbt/football_analytics --profiles-dir dbt/football_
   ```
 - The `databricks_default` and `fs_default` Airflow connections are created/refreshed
   automatically by `airflow-init` on every `docker compose up` — no manual setup.
+
+### CI (GitHub Actions)
+
+`ci-dbt-test.yml` and `ci-lint.yml` need the same Databricks credentials as local
+development, added as **repository secrets** (Settings → Secrets and variables →
+Actions), not committed anywhere: `DATABRICKS_HOST`, `DATABRICKS_HTTP_PATH`,
+`DATABRICKS_TOKEN`, `DATABRICKS_CATALOG`. Both run against the `dev` catalog — see
+[`docs/architecture.md`](docs/architecture.md#what-cicd-does-and-doesnt-cover-here)
+for why this project's CI intentionally stops there instead of also deploying to a
+production environment that doesn't exist yet.

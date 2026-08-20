@@ -7,9 +7,9 @@ compare against).
 
 A new row-version is opened for a team whenever any of `played`, `won`,
 `drawn`, `lost`, `goals_for`, `goals_against`, `goal_difference`, `points`,
-or `position` changes since its last version — the old version gets
+or `table_position` changes since its last version — the old version gets
 `dbt_valid_to` set to the run's timestamp, and a new version is inserted
-with `dbt_valid_to = null`. Note `position` is relative to every other
+with `dbt_valid_to = null`. Note `table_position` is relative to every other
 team's results, so a team's version can change even on a day it didn't
 play, if other results shifted its ranking.
 

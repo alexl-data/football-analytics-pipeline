@@ -13,17 +13,18 @@
 with current_season as (
     select max(season_start_year) as season_start_year
     from {{ ref('fct_matches') }}
-    where source = 'football_api'
+    where data_source = 'football_api'
 ),
 
 played_matches as (
     select fct_matches.*
     from {{ ref('fct_matches') }} as fct_matches
     cross join current_season
-    where fct_matches.source = 'football_api'
-      and fct_matches.season_start_year = current_season.season_start_year
-      and fct_matches.home_score is not null
-      and fct_matches.away_score is not null
+    where
+        fct_matches.data_source = 'football_api'
+        and fct_matches.season_start_year = current_season.season_start_year
+        and fct_matches.home_score is not null
+        and fct_matches.away_score is not null
 ),
 
 team_perspective as (
@@ -76,10 +77,14 @@ select
     -- Standard Bundesliga tie-break order: points, then goal difference,
     -- then goals scored. Left-joined so teams with 0 played matches still
     -- appear in the table (e.g. before the season's first matchday).
+    -- Named table_position, not position -- POSITION() is a reserved SQL
+    -- function, and a bare `position` column alias is flagged as a keyword
+    -- used as an identifier.
     rank() over (
-        order by coalesce(aggregated.points, 0) desc,
-                 coalesce(aggregated.goal_difference, 0) desc,
-                 coalesce(aggregated.goals_for, 0) desc
-    ) as position
+        order by
+            coalesce(aggregated.points, 0) desc,
+            coalesce(aggregated.goal_difference, 0) desc,
+            coalesce(aggregated.goals_for, 0) desc
+    ) as table_position
 from {{ ref('teams') }} as teams
 left join aggregated on teams.team_id = aggregated.team_id

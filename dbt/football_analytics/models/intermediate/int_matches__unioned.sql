@@ -5,7 +5,7 @@
 
 with football_api as (
     select
-        'football_api' as source,
+        'football_api' as data_source,
         cast(match_id as string) as source_match_id,
         matchday,
         cast(utc_date as date) as match_date,
@@ -19,7 +19,7 @@ with football_api as (
 
 openfootball as (
     select
-        'openfootball' as source,
+        'openfootball' as data_source,
         match_id as source_match_id,
         matchday,
         match_date,
@@ -38,8 +38,9 @@ unioned as (
 )
 
 select
-    md5(concat_ws('|', unioned.source, unioned.source_match_id)) as match_id,
-    unioned.source,
+    md5(concat_ws('|', unioned.data_source, unioned.source_match_id))
+        as match_id,
+    unioned.data_source,
     unioned.matchday,
     unioned.match_date,
     home_alias.team_id as home_team_id,
