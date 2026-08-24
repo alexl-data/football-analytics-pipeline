@@ -1,10 +1,5 @@
 name: CI - Docker build
 
-# Not in the original two-workflow plan (ci-dbt-test.yml, ci-lint.yml) but
-# added since a broken airflow/Dockerfile or requirements.txt (e.g. the
-# apache-airflow-providers-databricks / Airflow 3.x incident, or the
-# dbt-databricks / click version conflict) would otherwise only surface the
-# next time someone happens to rebuild the image locally.
 on:
   pull_request:
     branches: [main]

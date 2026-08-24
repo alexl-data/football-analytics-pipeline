@@ -1,7 +1,6 @@
 # Committed on purpose: contains no literal secrets, only env_var() references
 # resolved from .env at runtime. Point dbt at this file with:
 #   dbt debug --profiles-dir dbt/football_analytics
-# or export DBT_PROFILES_DIR=dbt/football_analytics for the session.
 football_analytics:
   target: dev
   outputs:

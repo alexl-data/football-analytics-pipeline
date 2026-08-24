@@ -77,9 +77,6 @@ select
     -- Standard Bundesliga tie-break order: points, then goal difference,
     -- then goals scored. Left-joined so teams with 0 played matches still
     -- appear in the table (e.g. before the season's first matchday).
-    -- Named table_position, not position -- POSITION() is a reserved SQL
-    -- function, and a bare `position` column alias is flagged as a keyword
-    -- used as an identifier.
     rank() over (
         order by
             coalesce(aggregated.points, 0) desc,

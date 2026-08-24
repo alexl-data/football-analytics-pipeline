@@ -179,10 +179,7 @@ def football_pipeline():
 
     # A single `dbt build` (seeds + models + snapshots + tests, in dbt's own
     # dependency order) rather than separate staging/snapshot/marts/test
-    # tasks: fct_standings_current (marts) is a dependency of
-    # snapshot_standings, so a fixed staging-then-snapshot-then-marts task
-    # order would be wrong — dbt's own graph resolves this correctly, Airflow
-    # doesn't need to micromanage it.
+    # -> Airflow doesn't need to micromanage it
     dbt_build = BashOperator(
         task_id="dbt_build",
         # dbt lives in its own venv (see airflow/Dockerfile) — its

@@ -5,11 +5,9 @@
 -- Raw layer principle: land the source shape as closely as possible — only
 -- mechanical renames (spaces -> underscores, lowercase) so columns are valid
 -- SQL identifiers, no type interpretation beyond a trivial int cast, no
--- derived columns. Date parsing and splitting FT ("8-0") into home/away
--- score ints is staging-layer work (stg_openfootball__matches), not
--- ingestion work.
+-- derived columns.
 --
--- Source: footballcsv/deutschland mirror of openfootball, columns
+-- Source: footballcsv/deutschland mirror of openfootball, columns:
 -- Round,Date,Team 1,FT,Team 2 (e.g. "1,Fri Sep 18 2020,Bayern München,8-0,FC
 -- Schalke 04"). upload_historical_file uploads every dropped season file
 -- under its own name (not a fixed filename), so this reads the whole landing
