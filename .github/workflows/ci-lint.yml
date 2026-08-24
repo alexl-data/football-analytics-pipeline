@@ -27,6 +27,6 @@ jobs:
         with:
           python-version: "3.11"
 
-      - run: pip install dbt-databricks==1.12.4 sqlfluff sqlfluff-templater-dbt
+      - run: pip install -r dbt/requirements.txt sqlfluff sqlfluff-templater-dbt
 
       - run: sqlfluff lint dbt/football_analytics/models dbt/football_analytics/snapshots

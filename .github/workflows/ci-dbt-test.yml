@@ -23,7 +23,7 @@ jobs:
         with:
           python-version: "3.11"
 
-      - run: pip install dbt-databricks==1.12.4
+      - run: pip install -r dbt/requirements.txt
 
       # Runs against the same dev catalog used for local development — fine
       # for a solo project's PR volume; a team project would want a
