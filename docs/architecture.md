@@ -84,9 +84,7 @@ docker compose up -d
 
 Then open `http://localhost:8080` and log in with `AIRFLOW_ADMIN_USERNAME` /
 `AIRFLOW_ADMIN_PASSWORD` from `.env` (defaults to `admin` / `admin` if unset — change
-this for anything beyond local use). The `setup_healthcheck` DAG should appear and
-can be triggered manually to confirm the scheduler and executor work end to end; it's
-temporary and will be removed once the real pipeline DAG exists.
+this for anything beyond local use). The `football_pipeline` DAG should appear.
 
 ## What CI/CD does and doesn't cover here
 
