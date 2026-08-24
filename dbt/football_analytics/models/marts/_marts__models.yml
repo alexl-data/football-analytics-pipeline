@@ -8,6 +8,18 @@ models:
         tests:
           - unique
           - not_null
+      - name: city
+        description: City the club is based in.
+      - name: stadium
+        description: >
+          Home stadium name, including sponsor naming rights where
+          applicable — see the teams seed's own description for the
+          accuracy caveat (compiled from general knowledge, not
+          cross-checked against an authoritative source).
+      - name: capacity
+        description: Home stadium seating capacity.
+      - name: founded_year
+        description: Year the club was founded.
 
   - name: fct_matches
     description: >
